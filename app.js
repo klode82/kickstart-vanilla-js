@@ -55,7 +55,11 @@ class App {
             }
         };
 
-        this.#options = {};
+        this.loadTemplates()
+        .then( res => {
+            this.StartApp();
+            console.info(`${this.getOption("className")} ver. ${this.getOption("version")}`);
+        });
 
         this.defineActions();
 
@@ -129,6 +133,42 @@ class App {
     }
 
 
+
+
+    /**
+     * Genera una Promise che scatena la funzione `resolve` solo dopo aver caricato tutti i Template
+     * nella lista `#options.templates`.
+     * @returns Promise
+     */
+    loadTemplates(){
+        return new Promise( (resolve, reject) => {
+            console.info("Loading Templates...");
+            let templateKeys = Object.keys(this.#options.templates);
+            let instance = this;
+
+            const Promises = templateKeys.map(tplKey => {
+                const tpl = instance.getTemplate(tplKey);
+                return fetch(tpl.path)
+                    .then(res => res.text())
+                    .then(html => {
+                        instance.#options.templates[tplKey].content = html;
+                    });
+            });
+
+            Promise.all(Promises)
+            .then( res => {
+                console.info("All Templates loaded.", res);
+                resolve(true);
+            })
+            .catch( err => {
+                console.info("Unable to Load Templates.", err);
+                reject(false);
+            })
+        })
+    }
+
+
+
     /**
      * Ritorna l'oggetto di `templates` indicato dalla chiave di gestione. Da non confondere con il codice.
      * @param {string} key : indica la chiave alla quale è associato l'oggetto che identifica lo snippet o porzione di template.
@@ -139,6 +179,43 @@ class App {
             return this.#options.templates[key];
         return null;
     }
+
+
+
+
+    StartApp(){
+        console.info("Starting Interface Constructor...");
+        
+        /**
+         * In questa sezione è possibile richiamare il contenuto dai Template caricati.
+         * La pagina HTML potrebbe essere una scheletrica pagina HTML con il body completamente vuoto (o popolato degli script necessari).
+         * Questo script potrà essere inserito in fondo alla pagina, dopo il Tag HTML.
+         * Il browser eseguirà correttamente lo script.
+         */
+        /* if(this.User === undefined){
+            if(document.readyState === 'loading')
+                window.addEventListener('DOMContentLoaded', this.loadFrameLoginPage);
+            else
+                this.loadFrameLoginPage();
+        } else {
+            if(document.readyState === 'loading')
+                window.addEventListener('DOMContentLoaded', this.loadFrameAppPage);
+            else
+                this.loadFrameAppPage();
+        } */
+
+        this.AfterLoadApp();
+    }
+
+
+    AfterLoadApp(){
+        this.defineActions();
+
+        this.defineChanges();
+
+        this.defineComponents();
+    }
+
 
 
 
